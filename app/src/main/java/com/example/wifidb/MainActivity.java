@@ -1,16 +1,15 @@
 package com.example.wifidb;
 
-import android.arch.lifecycle.ViewModelProviders;
-import android.arch.persistence.room.Room;
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Handler;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.support.v7.widget.DefaultItemAnimator;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -31,6 +30,12 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
+                    0);
+        }
+
         final WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         final Handler handler = new Handler();
         int delay = 100; //milliseconds
@@ -56,10 +61,17 @@ public class MainActivity extends AppCompatActivity {
             }
         }, delay);
         appDatabase = AppDatabase.getInstance(getApplication());
-        ListView listView = findViewById(R.id.itemsList);
-        List<Entry> entries = AppDatabase.getInstance(getApplication()).daoAccess().fetchAllEntries();
-        ArrayAdapter<Entry> crsAdapter = new ArrayAdapter<>(this,android.R.layout.simple_list_item_1, entries);
-        listView.setAdapter(crsAdapter);
+        final ListView listView = findViewById(R.id.itemsList);
+        handler.postDelayed(new Runnable(){
+            public void run(){
+                List<Entry> entries = AppDatabase.getInstance(getApplication()).daoAccess().fetchAllEntries();
+                ArrayAdapter<Entry> crsAdapter = new ArrayAdapter<Entry>(getApplication(),R.layout.list_item, entries);
+                listView.setAdapter(crsAdapter);
+                handler.postDelayed(this, 1000);
+            }
+        }, delay);
+
+
     }
 
     public void inputDB(View v) {
@@ -68,19 +80,31 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 Entry entry = new Entry();
-                double X = Double.parseDouble(""+( (EditText) findViewById(R.id.editTextX) ).getText());
-                double Y = Double.parseDouble(""+( (EditText) findViewById(R.id.editTextY) ).getText());
-                double Z = Double.parseDouble(""+( (EditText) findViewById(R.id.editTextZ) ).getText());
-                entry.setSno(appDatabase.daoAccess().lastNum()+1);
-                entry.setBssid(BSSID);
-                entry.setDbm(dBm);
-                entry.setX(X);
-                entry.setY(Y);
-                entry.setZ(Z);
-                appDatabase.daoAccess().insertEntry(entry);
+                double X;
+                double Y;
+                double Z;
+                try {
+                    X = Double.parseDouble(""+( (EditText) findViewById(R.id.editTextX) ).getText());
+                    Y = Double.parseDouble(""+( (EditText) findViewById(R.id.editTextY) ).getText());
+                    Z = Double.parseDouble(""+( (EditText) findViewById(R.id.editTextZ) ).getText());
+                    entry.setSno(appDatabase.daoAccess().lastNum()+1);
+                    entry.setBssid(BSSID);
+                    entry.setDbm(dBm);
+                    entry.setX(X);
+                    entry.setY(Y);
+                    entry.setZ(Z);
+                    appDatabase.daoAccess().insertEntry(entry);
+                } catch (Exception e) {
+                    Log.d("ParseDoubleE", e.getMessage());
+                    MainActivity.this.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(getApplication(), "Enter numbers only!", Toast.LENGTH_LONG).show();
+                        }
+                    });
+                }
             }
         }).start();
-
     }
     public void deleteLast(View v) {
         Toast.makeText(v.getContext(), "Deleting last Entry", Toast.LENGTH_SHORT).show();
