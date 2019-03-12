@@ -21,6 +21,8 @@ import android.widget.Toast;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
+    private List<Entry> entries;
+    private ArrayAdapter<Entry> crsAdapter;
     String BSSID;
     String SSID;
     int dBm;
@@ -62,15 +64,14 @@ public class MainActivity extends AppCompatActivity {
         }, delay);
         appDatabase = AppDatabase.getInstance(getApplication());
         final ListView listView = findViewById(R.id.itemsList);
-        List<Entry> entries = AppDatabase.getInstance(getApplication()).daoAccess().fetchAllEntries();
-        ArrayAdapter<Entry> crsAdapter = new ArrayAdapter<Entry>(getApplication(),R.layout.list_item, entries);
+        entries = AppDatabase.getInstance(getApplication()).daoAccess().fetchAllEntries();
+        crsAdapter = new ArrayAdapter<Entry>(getApplication(),R.layout.list_item, entries);
         listView.setAdapter(crsAdapter);
 
 
     }
 
     public void inputDB(View v) {
-        Toast.makeText(v.getContext(), "Inserting Entry", Toast.LENGTH_SHORT).show();
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -89,6 +90,7 @@ public class MainActivity extends AppCompatActivity {
                     entry.setY(Y);
                     entry.setZ(Z);
                     appDatabase.daoAccess().insertEntry(entry);
+                    updateAdapter();
                 } catch (Exception e) {
                     Log.d("ParseDoubleE", e.getMessage());
                     MainActivity.this.runOnUiThread(new Runnable() {
@@ -101,12 +103,25 @@ public class MainActivity extends AppCompatActivity {
             }
         }).start();
     }
+    public void updateAdapter() {
+        entries.clear();
+        for(int i=0; i<AppDatabase.getInstance(getApplication()).daoAccess().fetchAllEntries().size(); i++) {
+            entries.add(AppDatabase.getInstance(getApplication()).daoAccess().fetchAllEntries().get(i));
+        }
+        MainActivity.this.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                crsAdapter.notifyDataSetChanged();
+            }
+        });
+    }
     public void deleteLast(View v) {
         Toast.makeText(v.getContext(), "Deleting last Entry", Toast.LENGTH_SHORT).show();
         new Thread(new Runnable() {
             @Override
             public void run() {
                 appDatabase.daoAccess().deleteLastEntry();
+                updateAdapter();
             }
         }).start();
     }
