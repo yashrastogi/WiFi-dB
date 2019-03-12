@@ -47,17 +47,16 @@ public class MainActivity extends AppCompatActivity {
                 if(wifiInfo.getRssi() == -127) {
                     SSID = "Not connected to WiFi";
                     BSSID = "Connection required!";
-                    dBm = 0;
                 } else {
-                    SSID = wifiInfo.getSSID();
-                    BSSID = wifiInfo.getBSSID();
-                    dBm = wifiInfo.getRssi();
+                    SSID = "Connected: "+wifiInfo.getSSID();
+                    BSSID = "BSSID: "+wifiInfo.getBSSID();
                 }
+                dBm = wifiInfo.getRssi();
                 TextView tvBSSID = findViewById(R.id.textView7);
                 TextView tvSSID = findViewById(R.id.textView2);
                 TextView tvSignal = findViewById(R.id.textView6);
-                tvBSSID.setText("BSSID: "+BSSID);
-                tvSSID.setText("Connected: "+SSID);
+                tvBSSID.setText(BSSID);
+                tvSSID.setText(SSID);
                 tvSignal.setText("Signal Strength: "+dBm);
                 handler.postDelayed(this, 1000);
             }
@@ -65,10 +64,8 @@ public class MainActivity extends AppCompatActivity {
         appDatabase = AppDatabase.getInstance(getApplication());
         final ListView listView = findViewById(R.id.itemsList);
         entries = AppDatabase.getInstance(getApplication()).daoAccess().fetchAllEntries();
-        crsAdapter = new ArrayAdapter<Entry>(getApplication(),R.layout.list_item, entries);
+        crsAdapter = new ArrayAdapter<>(getApplication(), R.layout.list_item, entries);
         listView.setAdapter(crsAdapter);
-
-
     }
 
     public void inputDB(View v) {
@@ -79,29 +76,49 @@ public class MainActivity extends AppCompatActivity {
                 double X;
                 double Y;
                 double Z;
+                entry.setSno(appDatabase.daoAccess().lastNum()+1);
+                entry.setBssid(BSSID);
+                entry.setDbm(dBm);
                 try {
+                    if (entry.getDbm() == -127) {
+                        MainActivity.this.runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(getApplication(), "Please connect to WiFi to continue", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
                     X = Double.parseDouble(""+( (EditText) findViewById(R.id.editTextX) ).getText());
                     Y = Double.parseDouble(""+( (EditText) findViewById(R.id.editTextY) ).getText());
                     Z = Double.parseDouble(""+( (EditText) findViewById(R.id.editTextZ) ).getText());
-                    entry.setSno(appDatabase.daoAccess().lastNum()+1);
-                    entry.setBssid(BSSID);
-                    entry.setDbm(dBm);
                     entry.setX(X);
                     entry.setY(Y);
                     entry.setZ(Z);
-                    appDatabase.daoAccess().insertEntry(entry);
-                    updateAdapter();
+                    if (entry.getDbm() != -127) {
+                        appDatabase.daoAccess().insertEntry(entry);
+                        updateAdapter();
+                        MainActivity.this.runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(getApplication(), "Inserted entry!", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
                 } catch (Exception e) {
                     Log.d("ParseDoubleE", e.getMessage());
-                    MainActivity.this.runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            Toast.makeText(getApplication(), "Enter numbers only!", Toast.LENGTH_LONG).show();
-                        }
-                    });
+                    if(entry.getDbm() != -127) {
+                        MainActivity.this.runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(getApplication(), "Enter numbers only!", Toast.LENGTH_LONG).show();
+                            }
+                        });
+                    }
                 }
+
             }
         }).start();
+
     }
     public void updateAdapter() {
         entries.clear();
