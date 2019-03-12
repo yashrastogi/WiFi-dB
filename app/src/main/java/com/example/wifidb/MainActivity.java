@@ -62,14 +62,9 @@ public class MainActivity extends AppCompatActivity {
         }, delay);
         appDatabase = AppDatabase.getInstance(getApplication());
         final ListView listView = findViewById(R.id.itemsList);
-        handler.postDelayed(new Runnable(){
-            public void run(){
-                List<Entry> entries = AppDatabase.getInstance(getApplication()).daoAccess().fetchAllEntries();
-                ArrayAdapter<Entry> crsAdapter = new ArrayAdapter<Entry>(getApplication(),R.layout.list_item, entries);
-                listView.setAdapter(crsAdapter);
-                handler.postDelayed(this, 1000);
-            }
-        }, delay);
+        List<Entry> entries = AppDatabase.getInstance(getApplication()).daoAccess().fetchAllEntries();
+        ArrayAdapter<Entry> crsAdapter = new ArrayAdapter<Entry>(getApplication(),R.layout.list_item, entries);
+        listView.setAdapter(crsAdapter);
 
 
     }
